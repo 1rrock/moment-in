@@ -95,6 +95,7 @@ export default function PhotoboothApp() {
   const [showFlash, setShowFlash] = useState(false);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
   const autoCapturingRef = useRef(false);
+  const autoCaptureTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const addLog = useCallback((msg: string) => {
     const timestamp = new Date().toLocaleTimeString();
@@ -348,6 +349,12 @@ export default function PhotoboothApp() {
 
       let currentCount = delayTime;
       const timer = setInterval(() => {
+        // 중지 체크
+        if (!autoCapturingRef.current) {
+          clearInterval(timer);
+          return;
+        }
+
         currentCount -= 1;
         if (currentCount <= 0) {
           clearInterval(timer);
@@ -382,7 +389,12 @@ export default function PhotoboothApp() {
                   setPhotos((prev) => {
                     const newPhotos = [...prev, photoData];
                     addLog(`저장 성공 (${newPhotos.length}/${maxPhotos})`);
-                    setTimeout(() => captureNext(newPhotos.length), 800);
+
+                    // 다음 촬영 예약 전 중지 여부 재확인
+                    if (autoCapturingRef.current) {
+                      const nextTimer = setTimeout(() => captureNext(newPhotos.length), 800);
+                      autoCaptureTimerRef.current = nextTimer;
+                    }
                     return newPhotos;
                   });
                 }
@@ -397,17 +409,25 @@ export default function PhotoboothApp() {
           setCountdown(currentCount);
         }
       }, 1000);
+      autoCaptureTimerRef.current = timer;
     };
 
     captureNext(photos.length);
   }, [isAutoCapturing, photos.length, maxPhotos, delayTime, isStreamReady]);
 
   const stopAutoCapture = useCallback(() => {
+    addLog("자동 촬영 중단 요청");
     autoCapturingRef.current = false;
     setIsAutoCapturing(false);
     setIsCapturing(false);
     setCountdown(null);
-  }, []);
+
+    if (autoCaptureTimerRef.current) {
+      clearInterval(autoCaptureTimerRef.current);
+      clearTimeout(autoCaptureTimerRef.current);
+      autoCaptureTimerRef.current = null;
+    }
+  }, [addLog]);
 
   const resetPhotos = () => {
     setPhotos([]);
