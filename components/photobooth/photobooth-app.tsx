@@ -575,10 +575,10 @@ export default function PhotoboothApp() {
   const StepIndicator = () => (
     <div className="bg-white rounded-3xl shadow-lg p-4 mb-6">
       <div className="flex items-center justify-between relative">
-        <div className="absolute top-1/2 left-0 right-0 h-1 bg-gray-100 -translate-y-1/2 z-0" />
+        <div className="absolute top-6 left-6 right-6 h-1 bg-gray-100 -translate-y-1/2 z-0" />
         <div
-          className="absolute top-1/2 left-0 h-1 bg-gradient-to-r from-pink-500 to-purple-500 -translate-y-1/2 z-0 transition-all duration-300"
-          style={{ width: `${(currentStepIndex / (STEPS.length - 1)) * 100}%` }}
+          className="absolute top-6 left-6 h-1 bg-gradient-to-r from-pink-500 to-purple-500 -translate-y-1/2 z-0 transition-all duration-300"
+          style={{ width: `calc(${(currentStepIndex / (STEPS.length - 1)) * 100}% - 48px)` }}
         />
         {STEPS.map((s, index) => {
           const isCompleted = index < currentStepIndex;
@@ -695,11 +695,11 @@ export default function PhotoboothApp() {
     // Landing Page
     if (step === "landing") {
       return (
-        <div className="min-h-screen bg-gradient-to-br from-pink-200 via-purple-100 to-pink-100 flex flex-col items-center justify-center p-6">
-          <div className="w-full max-w-md space-y-8">
-            <div className="text-center space-y-4">
+        <div className="h-[100dvh] bg-gradient-to-br from-pink-200 via-purple-100 to-pink-100 flex flex-col items-center justify-center p-4 overflow-hidden">
+          <div className="w-full max-w-sm space-y-4 flex flex-col py-4 h-full max-h-[850px]">
+            <div className="text-center space-y-2 py-4">
               <div
-                className="w-28 h-28 mx-auto border-4 border-pink-400 rounded-3xl flex items-center justify-center bg-white/50 cursor-pointer active:scale-95 transition-transform"
+                className="w-20 h-20 mx-auto border-4 border-pink-400 rounded-3xl flex items-center justify-center bg-white/50 cursor-pointer active:scale-95 transition-transform"
                 onClick={() => {
                   const newCount = clickCount + 1;
                   if (newCount >= 5) {
@@ -711,56 +711,56 @@ export default function PhotoboothApp() {
                   }
                 }}
               >
-                <Camera className="w-14 h-14 text-pink-500" />
+                <Camera className="w-10 h-10 text-pink-500" />
               </div>
-              <h1 className="text-5xl font-bold bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">
                 Moment In
               </h1>
-              <p className="text-gray-600 text-lg">
+              <p className="text-gray-500 text-base">
                 언제 어디서나 특별한 순간을 담아보세요
               </p>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-xl p-6 space-y-4">
-              <h2 className="text-xl font-bold text-center text-gray-800 flex items-center justify-center gap-2">
+            <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-5 space-y-4 flex-1 flex flex-col justify-center overflow-auto max-h-[500px]">
+              <h2 className="text-lg font-bold text-center text-gray-800 flex items-center justify-center gap-2">
                 <span>📸</span> 시작하기 전에
               </h2>
 
-              <div className="space-y-3">
-                <div className="bg-pink-50 rounded-2xl p-4 flex items-start gap-4">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+              <div className="space-y-2">
+                <div className="bg-pink-50/50 rounded-2xl p-3 flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
                     1
                   </div>
                   <div>
-                    <h3 className="font-semibold text-pink-600">카메라 권한 허용</h3>
-                    <p className="text-gray-500 text-sm">브라우저에서 카메라 사용 권한을 요청하면 "허용"을 눌러주세요.</p>
+                    <h3 className="font-semibold text-pink-600 text-sm">카메라 권한 허용</h3>
+                    <p className="text-gray-500 text-xs">"허용"을 눌러주세요.</p>
                   </div>
                 </div>
 
-                <div className="bg-purple-50 rounded-2xl p-4 flex items-start gap-4">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                <div className="bg-purple-50/50 rounded-2xl p-3 flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
                     2
                   </div>
                   <div>
-                    <h3 className="font-semibold text-purple-600">카메라 확인</h3>
-                    <p className="text-gray-500 text-sm">카메라가 정상적으로 작동하는지 확인하세요.</p>
+                    <h3 className="font-semibold text-purple-600 text-sm">카메라 확인</h3>
+                    <p className="text-gray-500 text-xs">작동 상태를 확인하세요.</p>
                   </div>
                 </div>
 
-                <div className="bg-blue-50 rounded-2xl p-4 flex items-start gap-4">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                <div className="bg-blue-50/50 rounded-2xl p-3 flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
                     3
                   </div>
                   <div>
-                    <h3 className="font-semibold text-blue-600">프레임 설정 & 촬영</h3>
-                    <p className="text-gray-500 text-sm">레이아웃과 필터를 선택하고 촬영하세요.</p>
+                    <h3 className="font-semibold text-blue-600 text-sm">프레임 설정 & 촬영</h3>
+                    <p className="text-gray-500 text-xs">레이아웃을 고르고 촬영하세요.</p>
                   </div>
                 </div>
               </div>
 
               <Button
                 onClick={() => setStep("camera")}
-                className="w-full py-6 text-lg bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white rounded-2xl shadow-lg"
+                className="w-full py-5 text-base bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white rounded-2xl shadow-lg mt-2"
               >
                 <Camera className="w-5 h-5 mr-2" />
                 카메라 시작하기
@@ -768,8 +768,8 @@ export default function PhotoboothApp() {
               </Button>
             </div>
 
-            <p className="text-center text-gray-400 text-sm">
-              💡 팁: 조용한 곳에서 충분한 조명 아래 촬영하면 더 좋은 결과를 얻을 수 있어요!
+            <p className="text-center text-gray-400 text-xs mt-auto py-2">
+              💡 충분한 조명 아래 촬영하면 더 예쁘게 나와요!
             </p>
           </div>
         </div>
