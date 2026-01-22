@@ -8,13 +8,19 @@ export default defineConfig({
     icon: '', // 화면에 노출될 앱의 아이콘 이미지 주소로 바꿔주세요.
   },
   web: {
-    host: 'localhost',
+    host: '192.168.1.89',
     port: 3000,
     commands: {
       dev: 'next dev',
       build: 'next build',
     },
   },
-  permissions: [],
+  permissions: [
+    { name: 'camera', access: 'access' }
+  ],
+  webViewProps: {
+    allowsInlineMediaPlayback: true,
+    mediaPlaybackRequiresUserAction: false,
+  },
   outdir: 'out',
 });
