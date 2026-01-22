@@ -626,12 +626,6 @@ export default function PhotoboothApp() {
       )}
       <div className="absolute top-3 right-3 flex flex-col gap-2">
         <button
-          onClick={startCamera}
-          className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors"
-        >
-          <RefreshCw className="w-5 h-5 text-gray-700" />
-        </button>
-        <button
           onClick={toggleCamera}
           className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors"
         >
