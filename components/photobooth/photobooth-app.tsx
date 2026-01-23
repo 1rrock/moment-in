@@ -42,19 +42,15 @@ const FILTERS: { id: FilterType; name: string; icon: string; style: string }[] =
 ];
 
 const FRAME_THEMES: { id: FrameTheme; name: string; icon: string; gradient: string; textColor: string }[] = [
-  { id: "coral", name: "코랄", icon: "🌺", gradient: "linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)", textColor: "#d63384" },
-  { id: "peach", name: "피치", icon: "🍑", gradient: "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)", textColor: "#e85d04" },
-  { id: "sunset", name: "선셋", icon: "🌇", gradient: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)", textColor: "#d00000" },
-  { id: "cream", name: "크림", icon: "🍦", gradient: "linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)", textColor: "#6c757d" },
+  { id: "mono", name: "화이트", icon: "⬜", gradient: "#ffffff", textColor: "#000000" },
+  { id: "dark", name: "다크", icon: "⬛", gradient: "#000000", textColor: "#ffffff" },
+  { id: "peach", name: "피치", icon: "�", gradient: "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)", textColor: "#e85d04" },
+  { id: "coral", name: "코랄", icon: "�", gradient: "linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)", textColor: "#d63384" },
   { id: "mint", name: "민트", icon: "🌱", gradient: "linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%)", textColor: "#2d6a4f" },
-  { id: "sage", name: "세이지", icon: "🌿", gradient: "linear-gradient(135deg, #c1dfc4 0%, #deecdd 100%)", textColor: "#40916c" },
-  { id: "rose", name: "로즈", icon: "🌹", gradient: "linear-gradient(135deg, #ffc3a0 0%, #ffafbd 100%)", textColor: "#c9184a" },
-  { id: "lavender", name: "라벤더", icon: "💜", gradient: "linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)", textColor: "#7209b7" },
   { id: "sky", name: "스카이", icon: "☁️", gradient: "linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)", textColor: "#0077b6" },
-  { id: "ocean", name: "오션", icon: "🌊", gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", textColor: "#ffffff" },
-  { id: "mono", name: "모노", icon: "⬜", gradient: "linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%)", textColor: "#424242" },
-  { id: "dark", name: "다크", icon: "⬛", gradient: "linear-gradient(135deg, #434343 0%, #000000 100%)", textColor: "#ffffff" },
+  { id: "lavender", name: "라벤더", icon: "💜", gradient: "linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)", textColor: "#7209b7" },
 ];
+
 
 const STEPS = [
   { id: "camera", name: "카메라", icon: "📹" },
@@ -84,7 +80,8 @@ export default function PhotoboothApp() {
   const [step, setStep] = useState<Step>("landing");
   const [layout, setLayout] = useState<LayoutType>("4cut");
   const [filter, setFilter] = useState<FilterType>("none");
-  const [frameTheme, setFrameTheme] = useState<FrameTheme>("peach");
+  const [frameTheme, setFrameTheme] = useState<FrameTheme>("mono");
+
   const [photos, setPhotos] = useState<string[]>([]);
   const [isCapturing, setIsCapturing] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
@@ -469,36 +466,22 @@ export default function PhotoboothApp() {
     }
 
     const theme = FRAME_THEMES.find((t) => t.id === frameTheme);
-    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
 
-    if (frameTheme === "dark") {
-      gradient.addColorStop(0, "#434343");
-      gradient.addColorStop(1, "#000000");
-    } else if (frameTheme === "ocean") {
-      gradient.addColorStop(0, "#667eea");
-      gradient.addColorStop(1, "#764ba2");
-    } else if (frameTheme === "peach") {
-      gradient.addColorStop(0, "#ffecd2");
-      gradient.addColorStop(1, "#fcb69f");
-    } else if (frameTheme === "coral") {
-      gradient.addColorStop(0, "#ff9a9e");
-      gradient.addColorStop(1, "#fecfef");
-    } else if (frameTheme === "mint") {
-      gradient.addColorStop(0, "#d4fc79");
-      gradient.addColorStop(1, "#96e6a1");
-    } else if (frameTheme === "lavender") {
-      gradient.addColorStop(0, "#e0c3fc");
-      gradient.addColorStop(1, "#8ec5fc");
-    } else if (frameTheme === "sky") {
-      gradient.addColorStop(0, "#a1c4fd");
-      gradient.addColorStop(1, "#c2e9fb");
+    if (theme?.gradient.startsWith('linear-gradient')) {
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      // Simple parse for common gradients used in FRAME_THEMES
+      if (frameTheme === "peach") { gradient.addColorStop(0, "#ffecd2"); gradient.addColorStop(1, "#fcb69f"); }
+      else if (frameTheme === "coral") { gradient.addColorStop(0, "#ff9a9e"); gradient.addColorStop(1, "#fecfef"); }
+      else if (frameTheme === "mint") { gradient.addColorStop(0, "#d4fc79"); gradient.addColorStop(1, "#96e6a1"); }
+      else if (frameTheme === "lavender") { gradient.addColorStop(0, "#e0c3fc"); gradient.addColorStop(1, "#8ec5fc"); }
+      else if (frameTheme === "sky") { gradient.addColorStop(0, "#a1c4fd"); gradient.addColorStop(1, "#c2e9fb"); }
+      ctx.fillStyle = gradient;
     } else {
-      gradient.addColorStop(0, "#ffecd2");
-      gradient.addColorStop(1, "#fcb69f");
+      ctx.fillStyle = theme?.gradient || "#ffffff";
     }
 
-    ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
 
     const filterStyle = FILTERS.find((f) => f.id === filter)?.style || "";
 
@@ -557,13 +540,26 @@ export default function PhotoboothApp() {
 
       // Top logo
       ctx.font = "bold 28px 'Geist', sans-serif";
-      ctx.fillText("Moment In", canvas.width / 2, padding + 35);
+      ctx.fillText("moment in 📸", canvas.width / 2, padding + 35);
 
       // Bottom date
       const now = new Date();
-      const dateStr = `${String(now.getMonth() + 1).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")}/${now.getFullYear()}`;
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      let hours = now.getHours();
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      const strTime = String(hours).padStart(2, '0') + ':' + minutes + ' ' + ampm;
+      const dateStr = `${year}/${month}/${day}, ${strTime}`;
+
       ctx.font = "500 16px 'Geist', sans-serif";
+
+
       ctx.fillText(dateStr, canvas.width / 2, canvas.height - 20);
+
 
       const dataUrl = canvas.toDataURL("image/png");
       const base64Data = dataUrl.split(",")[1];
@@ -1031,11 +1027,29 @@ export default function PhotoboothApp() {
           <div className="max-w-md mx-auto">
             <StepIndicator />
             <div className="rounded-3xl shadow-xl p-4 mb-6" style={{ background: selectedTheme?.gradient }}>
-              <p className="text-center mb-3 font-bold text-2xl" style={{ color: selectedTheme?.textColor }}>Moment In</p>
+              <p className="text-center mb-3 font-bold text-2xl" style={{ color: selectedTheme?.textColor }}>moment in 📸</p>
               <div className="grid grid-cols-2 gap-2">
                 {photos.map((p, i) => <img key={i} src={p} className="w-full aspect-[3/4] object-cover rounded-md" style={{ filter: FILTERS.find(f => f.id === filter)?.style || "" }} />)}
               </div>
+              <p className="text-center mt-3 text-xs opacity-70" style={{ color: selectedTheme?.textColor }}>
+                {(() => {
+                  const now = new Date();
+                  const year = now.getFullYear();
+                  const month = String(now.getMonth() + 1).padStart(2, "0");
+                  const day = String(now.getDate()).padStart(2, "0");
+                  let hours = now.getHours();
+                  const minutes = String(now.getMinutes()).padStart(2, "0");
+                  const ampm = hours >= 12 ? "PM" : "AM";
+                  hours = hours % 12;
+                  hours = hours ? hours : 12;
+                  const strTime = String(hours).padStart(2, "0") + ":" + minutes + " " + ampm;
+                  return `${year}/${month}/${day}, ${strTime}`;
+                })()}
+              </p>
+
+
             </div>
+
             <div className="bg-white rounded-3xl shadow-xl p-6 space-y-4">
               <div className="grid grid-cols-6 gap-2">
                 {FRAME_THEMES.map(t => <button key={t.id} onClick={() => setFrameTheme(t.id)} className={cn("w-10 h-10 rounded-lg flex items-center justify-center", frameTheme === t.id ? "ring-2 ring-purple-500" : "")} style={{ background: t.gradient }}>{t.icon}</button>)}
