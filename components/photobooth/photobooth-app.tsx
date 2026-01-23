@@ -5,6 +5,10 @@ import {
   generateHapticFeedback,
   saveBase64Data,
 } from "@apps-in-toss/web-framework";
+
+import { useRewardedAd } from "@/hooks/use-rewarded-ad";
+import { ConfirmDialog } from "./confirm-dialog";
+
 import {
   Camera,
   RefreshCw,
@@ -105,7 +109,13 @@ export default function PhotoboothApp() {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [shouldDownload, setShouldDownload] = useState(false);
   const streamRef = useRef<MediaStream | null>(null);
+
+
+
+  const { showRewardAd, loading: adLoading } = useRewardedAd();
 
   const maxPhotos = 4;
 
@@ -434,10 +444,14 @@ export default function PhotoboothApp() {
     stopAutoCapture();
   };
 
-  const downloadResult = () => {
+  const downloadResult = useCallback(async () => {
+    addLog("downloadResult 실행됨");
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    if (!ctx) {
+      addLog("오류: 캔버스 컨텍스트 획득 실패");
+      return;
+    }
 
     const padding = 30;
     const photoWidth = 280;
@@ -488,7 +502,10 @@ export default function PhotoboothApp() {
 
     const filterStyle = FILTERS.find((f) => f.id === filter)?.style || "";
 
-    const loadPromises = photos.map((photo, index) => {
+    addLog(`사진 ${photos.length}장 로딩 시작...`);
+    const currentPhotos = [...photos]; // 로컬 복사본 사용
+
+    const loadPromises = currentPhotos.map((photo, index) => {
       return new Promise<void>((resolve) => {
         const img = new window.Image();
         img.crossOrigin = "anonymous";
@@ -523,11 +540,18 @@ export default function PhotoboothApp() {
           ctx.restore();
           resolve();
         };
+        img.onerror = () => {
+          addLog(`사진 ${index} 로드 실패`);
+          resolve();
+        };
         img.src = photo;
       });
     });
 
-    Promise.all(loadPromises).then(async () => {
+    try {
+      await Promise.all(loadPromises);
+      addLog("이미지 렌더링 완료, 텍스트 그리기 시작");
+
       ctx.fillStyle = theme?.textColor || "#e85d04";
       ctx.textAlign = "center";
 
@@ -541,29 +565,65 @@ export default function PhotoboothApp() {
       ctx.font = "500 16px 'Geist', sans-serif";
       ctx.fillText(dateStr, canvas.width / 2, canvas.height - 20);
 
-      try {
-        addLog("이미지 데이터 저장 시작 (saveBase64Data)");
-        const dataUrl = canvas.toDataURL("image/png");
-        const base64Data = dataUrl.split(",")[1];
+      const dataUrl = canvas.toDataURL("image/png");
+      const base64Data = dataUrl.split(",")[1];
 
+      addLog("saveBase64Data 호출 중...");
+      try {
         await saveBase64Data({
           data: base64Data,
           fileName: `moment-in-${Date.now()}.png`,
           mimeType: "image/png"
         });
-
-        addLog("이미지 저장 성공!");
+        addLog("저장 성공");
         generateHapticFeedback({ type: "success" }).catch(() => { });
-      } catch (err) {
-        addLog(`저장 실패: ${err instanceof Error ? err.message : String(err)}`);
-        // 폴백: 일반 브라우저용 다운로드
+      } catch (saveErr) {
+        addLog(`saveBase64Data 실패: ${saveErr instanceof Error ? saveErr.message : String(saveErr)}`);
+        // 폴백
         const link = document.createElement("a");
         link.download = `moment-in-${Date.now()}.png`;
-        link.href = canvas.toDataURL("image/png");
+        link.href = dataUrl;
         link.click();
+        addLog("폴백 다운로드 시도됨");
+      }
+    } catch (err) {
+      addLog(`렌더링 과정 오류: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }, [photos, layout, filter, frameTheme, addLog]);
+
+  useEffect(() => {
+    if (shouldDownload) {
+      setShouldDownload(false);
+      addLog("Effect: 다운로드 트리거됨");
+      downloadResult();
+    }
+  }, [shouldDownload, downloadResult, addLog]);
+
+
+
+  const handleDownloadWithAd = useCallback(() => {
+    setIsConfirmOpen(true);
+  }, []);
+
+  const handleConfirmDownload = () => {
+    setIsConfirmOpen(false);
+    addLog("광고 요청 시작...");
+    showRewardAd({
+      onRewarded: () => {
+        addLog("리워드 이벤트 수신 - 1초 후 다운로드 예약");
+        setTimeout(() => {
+          setShouldDownload(true);
+        }, 1000);
+      },
+      onDismiss: () => {
+        addLog("광고 닫힘");
       }
     });
   };
+
+
+
+
 
   const getStepIndex = (s: Step): number => {
     const stepOrder: Step[] = ["camera", "layout", "filter", "capture", "result"];
@@ -980,7 +1040,7 @@ export default function PhotoboothApp() {
               <div className="grid grid-cols-6 gap-2">
                 {FRAME_THEMES.map(t => <button key={t.id} onClick={() => setFrameTheme(t.id)} className={cn("w-10 h-10 rounded-lg flex items-center justify-center", frameTheme === t.id ? "ring-2 ring-purple-500" : "")} style={{ background: t.gradient }}>{t.icon}</button>)}
               </div>
-              <Button onClick={downloadResult} className="w-full py-5 bg-pink-500 text-white rounded-2xl">다운로드</Button>
+              <Button onClick={handleDownloadWithAd} className="w-full py-5 bg-pink-500 text-white rounded-2xl">다운로드</Button>
               <Button onClick={() => { resetPhotos(); setStep("landing"); }} variant="outline" className="w-full py-5 text-gray-500 rounded-2xl">다시 찍기</Button>
             </div>
           </div>
@@ -1003,6 +1063,17 @@ export default function PhotoboothApp() {
           LOG
         </button>
       </div>
+      <ConfirmDialog
+        isOpen={isConfirmOpen}
+        title={"광고 시청 후 다운로드"}
+        description={"리워드 광고를 시청하시면\n이미지를 다운로드할 수 있습니다."}
+        confirmText="광고 보기"
+        cancelText="취소"
+        onConfirm={handleConfirmDownload}
+        onCancel={() => setIsConfirmOpen(false)}
+      />
     </>
   );
 }
+
+
