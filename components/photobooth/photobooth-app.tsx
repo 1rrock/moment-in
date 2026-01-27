@@ -60,21 +60,6 @@ const STEPS = [
   { id: "result", name: "완료", icon: "🎉" },
 ];
 
-const DebugOverlay = ({ logs, onClose }: { logs: string[], onClose: () => void }) => (
-  <div className="fixed inset-0 z-[9999] bg-black/90 text-green-400 p-4 font-mono text-xs overflow-auto flex flex-col">
-    <div className="flex justify-between items-center mb-4 border-b border-green-400 pb-2">
-      <h3 className="text-lg font-bold">Terminal Logs</h3>
-      <button onClick={onClose} className="px-3 py-1 bg-green-400 text-black rounded font-bold">CLOSE</button>
-    </div>
-    <div className="flex-1 space-y-1">
-      {logs.length === 0 ? (
-        <p className="text-gray-500 italic">No logs yet...</p>
-      ) : (
-        logs.map((log, i) => <div key={i}>{log}</div>)
-      )}
-    </div>
-  </div>
-);
 
 export default function PhotoboothApp() {
   const [step, setStep] = useState<Step>("landing");
@@ -90,19 +75,11 @@ export default function PhotoboothApp() {
   const [isStreamReady, setIsStreamReady] = useState(false);
   const [delayTime, setDelayTime] = useState(5);
   const [isAutoCapturing, setIsAutoCapturing] = useState(false);
-  const [logs, setLogs] = useState<string[]>([]);
-  const [showDebug, setShowDebug] = useState(false);
-  const [clickCount, setClickCount] = useState(0);
   const [showFlash, setShowFlash] = useState(false);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
   const autoCapturingRef = useRef(false);
   const autoCaptureTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const addLog = useCallback((msg: string) => {
-    const timestamp = new Date().toLocaleTimeString();
-    setLogs((prev) => [...prev.slice(-30), `[${timestamp}] ${msg}`]);
-    console.log(`[DEBUG] ${msg}`);
-  }, []);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -118,27 +95,19 @@ export default function PhotoboothApp() {
 
   const startCamera = useCallback(async () => {
     setCameraError(null);
-    addLog("카메라 시작 시도...");
 
-    if (!navigator.mediaDevices) {
-      addLog("오류: navigator.mediaDevices가 존재하지 않음");
-    } else if (!navigator.mediaDevices.getUserMedia) {
-      addLog("오류: getUserMedia가 존재하지 않음");
-    }
+
 
     // If stream already exists and is active, just attach to video
     if (streamRef.current && streamRef.current.active) {
-      addLog("기존 활성 스트림 사용 중...");
       if (videoRef.current && videoRef.current.srcObject !== streamRef.current) {
         videoRef.current.srcObject = streamRef.current;
         try {
           await videoRef.current.play();
           setIsStreamReady(true);
-          addLog("기존 비디오 재생 성공");
         } catch (err) {
           if (err instanceof Error && err.name !== "AbortError") {
-            addLog(`비디오 재생 오류: ${err.message}`);
-            console.error("Video play error:", err);
+
           }
         }
       }
@@ -149,11 +118,9 @@ export default function PhotoboothApp() {
 
     try {
       if (streamRef.current) {
-        addLog("기존 스트림 중지 중...");
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
 
-      addLog(`getUserMedia 호출 중... (모드: ${facingMode})`);
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: facingMode,
@@ -163,12 +130,10 @@ export default function PhotoboothApp() {
         audio: false,
       });
 
-      addLog("스트림 획득 성공!");
       streamRef.current = stream;
       setCameraPermission("granted");
 
       if (videoRef.current) {
-        addLog("비디오 요소 설정 중...");
         const video = videoRef.current;
 
         // 속성 설정 (srcObject 지정 전 수행)
@@ -182,36 +147,29 @@ export default function PhotoboothApp() {
         // 5초 안전장치
         const forceReadyTimeout = setTimeout(() => {
           if (!isStreamReady) {
-            addLog("안전장치: 5초 경과로 강제 준비 완료 처리");
             setIsStreamReady(true);
           }
         }, 5000);
 
         video.onloadedmetadata = () => {
-          addLog(`비디오 메타데이터 로드: ${video.videoWidth}x${video.videoHeight}`);
           // 캔버스 크기 미리 설정
           if (canvasRef.current) {
             canvasRef.current.width = video.videoWidth;
             canvasRef.current.height = video.videoHeight;
           }
-          video.play().catch(e => addLog(`Play 실패: ${e.message}`));
+          video.play().catch(e => { });
         };
 
         video.onplaying = () => {
-          addLog("비디오 재생 시작됨 (playing)");
           clearTimeout(forceReadyTimeout);
           setIsStreamReady(true);
         };
 
         video.oncanplay = () => {
-          addLog("비디오 재성 가능상태 (canplay)");
         };
-      } else {
-        addLog("오류: videoRef.current가 존재하지 않음");
       }
     } catch (err) {
       if (err instanceof Error) {
-        addLog(`getUserMedia 실패: ${err.name} - ${err.message}`);
         if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
           setCameraPermission("denied");
           setCameraError("카메라 권한이 거부되었습니다. 브라우저 설정에서 카메라 권한을 허용해주세요.");
@@ -224,7 +182,7 @@ export default function PhotoboothApp() {
         }
       }
     }
-  }, [addLog, facingMode]);
+  }, [facingMode]);
 
   const toggleCamera = useCallback(() => {
     setFacingMode((prev) => (prev === "user" ? "environment" : "user"));
@@ -250,13 +208,25 @@ export default function PhotoboothApp() {
     };
   }, [step, startCamera, stopCamera, facingMode]);
 
+  const stopAutoCapture = useCallback(() => {
+    autoCapturingRef.current = false;
+    setIsAutoCapturing(false);
+    setIsCapturing(false);
+    setCountdown(null);
+
+    if (autoCaptureTimerRef.current) {
+      clearInterval(autoCaptureTimerRef.current);
+      clearTimeout(autoCaptureTimerRef.current);
+      autoCaptureTimerRef.current = null;
+    }
+  }, []);
+
   useEffect(() => {
     if (photos.length >= maxPhotos && step === "capture") {
-      addLog("모든 사진 촬영 완료. 결과 화면으로 이동합니다.");
       stopAutoCapture();
       setStep("result");
     }
-  }, [photos.length, maxPhotos, step, addLog]);
+  }, [photos.length, step, stopAutoCapture]);
 
   const capturePhoto = useCallback(() => {
     if (!videoRef.current || !canvasRef.current || !isStreamReady) return;
@@ -266,7 +236,6 @@ export default function PhotoboothApp() {
     const ctx = canvas.getContext("2d");
 
     if (!ctx) {
-      addLog("오류: 캔버스 컨텍스트를 획득할 수 없음");
       return;
     }
 
@@ -274,10 +243,7 @@ export default function PhotoboothApp() {
       const vWidth = video.videoWidth;
       const vHeight = video.videoHeight;
 
-      addLog(`캡처 시도 해상도: ${vWidth}x${vHeight}`);
-
       if (vWidth === 0 || vHeight === 0) {
-        addLog("경고: 비디오 크기가 0입니다. 기본 해상도(640x480)로 시도합니다.");
         canvas.width = 640;
         canvas.height = 480;
       } else {
@@ -295,7 +261,6 @@ export default function PhotoboothApp() {
       const photoData = canvas.toDataURL("image/png");
 
       if (photoData === "data:," || photoData.length < 100) {
-        addLog("오류: 캡처된 데이터가 비어있습니다. (iOS 전체화면 이슈 가능성)");
         throw new Error("Empty image data received");
       }
 
@@ -306,12 +271,10 @@ export default function PhotoboothApp() {
       // 햅틱 피드백
       generateHapticFeedback({ type: "success" }).catch(() => { });
 
-      addLog(`캡처 성공: ${Math.round(photoData.length / 1024)}KB`);
       setPhotos((prev) => [...prev, photoData]);
     } catch (err) {
-      addLog(`캡처 실패: ${err instanceof Error ? err.message : String(err)}`);
     }
-  }, [isStreamReady, addLog, photos.length]);
+  }, [isStreamReady, photos.length]);
 
   const startCountdown = useCallback((onComplete: () => void) => {
     setIsCapturing(true);
@@ -375,7 +338,6 @@ export default function PhotoboothApp() {
 
             if (ctx) {
               try {
-                addLog(`자동 촬영 캡처 (${currentPhotos + 1}/${maxPhotos})`);
                 const vWidth = video.videoWidth || 640;
                 const vHeight = video.videoHeight || 480;
                 canvas.width = vWidth;
@@ -390,12 +352,9 @@ export default function PhotoboothApp() {
 
                 const photoData = canvas.toDataURL("image/png");
 
-                if (photoData === "data:," || photoData.length < 100) {
-                  addLog("자동 촬영 실패: 빈 데이터");
-                } else {
+                if (photoData !== "data:," && photoData.length >= 100) {
                   setPhotos((prev) => {
                     const newPhotos = [...prev, photoData];
-                    addLog(`저장 성공 (${newPhotos.length}/${maxPhotos})`);
 
                     // 다음 촬영 예약 전 중지 여부 재확인
                     if (autoCapturingRef.current) {
@@ -406,7 +365,6 @@ export default function PhotoboothApp() {
                   });
                 }
               } catch (err) {
-                addLog(`자동 촬영 중 오류: ${err instanceof Error ? err.message : String(err)}`);
                 setIsAutoCapturing(false);
                 autoCapturingRef.current = false;
               }
@@ -422,19 +380,6 @@ export default function PhotoboothApp() {
     captureNext(photos.length);
   }, [isAutoCapturing, photos.length, maxPhotos, delayTime, isStreamReady]);
 
-  const stopAutoCapture = useCallback(() => {
-    addLog("자동 촬영 중단 요청");
-    autoCapturingRef.current = false;
-    setIsAutoCapturing(false);
-    setIsCapturing(false);
-    setCountdown(null);
-
-    if (autoCaptureTimerRef.current) {
-      clearInterval(autoCaptureTimerRef.current);
-      clearTimeout(autoCaptureTimerRef.current);
-      autoCaptureTimerRef.current = null;
-    }
-  }, [addLog]);
 
   const resetPhotos = () => {
     setPhotos([]);
@@ -442,11 +387,9 @@ export default function PhotoboothApp() {
   };
 
   const downloadResult = useCallback(async () => {
-    addLog("downloadResult 실행됨");
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
     if (!ctx) {
-      addLog("오류: 캔버스 컨텍스트 획득 실패");
       return;
     }
 
@@ -485,7 +428,6 @@ export default function PhotoboothApp() {
 
     const filterStyle = FILTERS.find((f) => f.id === filter)?.style || "";
 
-    addLog(`사진 ${photos.length}장 로딩 시작...`);
     const currentPhotos = [...photos]; // 로컬 복사본 사용
 
     const loadPromises = currentPhotos.map((photo, index) => {
@@ -524,7 +466,6 @@ export default function PhotoboothApp() {
           resolve();
         };
         img.onerror = () => {
-          addLog(`사진 ${index} 로드 실패`);
           resolve();
         };
         img.src = photo;
@@ -533,7 +474,6 @@ export default function PhotoboothApp() {
 
     try {
       await Promise.all(loadPromises);
-      addLog("이미지 렌더링 완료, 텍스트 그리기 시작");
 
       ctx.fillStyle = theme?.textColor || "#e85d04";
       ctx.textAlign = "center";
@@ -564,36 +504,31 @@ export default function PhotoboothApp() {
       const dataUrl = canvas.toDataURL("image/png");
       const base64Data = dataUrl.split(",")[1];
 
-      addLog("saveBase64Data 호출 중...");
+
       try {
         await saveBase64Data({
           data: base64Data,
           fileName: `moment-in-${Date.now()}.png`,
           mimeType: "image/png"
         });
-        addLog("저장 성공");
         generateHapticFeedback({ type: "success" }).catch(() => { });
       } catch (saveErr) {
-        addLog(`saveBase64Data 실패: ${saveErr instanceof Error ? saveErr.message : String(saveErr)}`);
         // 폴백
         const link = document.createElement("a");
         link.download = `moment-in-${Date.now()}.png`;
         link.href = dataUrl;
         link.click();
-        addLog("폴백 다운로드 시도됨");
       }
     } catch (err) {
-      addLog(`렌더링 과정 오류: ${err instanceof Error ? err.message : String(err)}`);
     }
-  }, [photos, layout, filter, frameTheme, addLog]);
+  }, [photos, layout, filter, frameTheme]);
 
   useEffect(() => {
     if (shouldDownload) {
       setShouldDownload(false);
-      addLog("Effect: 다운로드 트리거됨");
       downloadResult();
     }
-  }, [shouldDownload, downloadResult, addLog]);
+  }, [shouldDownload, downloadResult]);
 
 
 
@@ -603,16 +538,13 @@ export default function PhotoboothApp() {
 
   const handleConfirmDownload = () => {
     setIsConfirmOpen(false);
-    addLog("광고 요청 시작...");
     showRewardAd({
       onRewarded: () => {
-        addLog("리워드 이벤트 수신 - 1초 후 다운로드 예약");
         setTimeout(() => {
           setShouldDownload(true);
         }, 1000);
       },
       onDismiss: () => {
-        addLog("광고 닫힘");
       }
     });
   };
@@ -756,16 +688,6 @@ export default function PhotoboothApp() {
             <div className="text-center space-y-2 py-4">
               <div
                 className="w-20 h-20 mx-auto border-4 border-pink-400 rounded-3xl flex items-center justify-center bg-white/50 cursor-pointer active:scale-95 transition-transform"
-                onClick={() => {
-                  const newCount = clickCount + 1;
-                  if (newCount >= 5) {
-                    setShowDebug(true);
-                    setClickCount(0);
-                    addLog("디버그 모드 활성화됨");
-                  } else {
-                    setClickCount(newCount);
-                  }
-                }}
               >
                 <Camera className="w-10 h-10 text-pink-500" />
               </div>
@@ -862,7 +784,11 @@ export default function PhotoboothApp() {
                   </p>
                 </div>
               </div>
-              <Button onClick={() => setStep("layout")} disabled={!isStreamReady} className="w-full py-6 text-lg bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white rounded-2xl shadow-lg disabled:opacity-50">
+              <Button
+                onClick={() => setStep("layout")}
+                disabled={!isStreamReady}
+                className="w-full py-5 text-base bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white rounded-2xl shadow-lg disabled:opacity-50"
+              >
                 레이아웃 선택하기
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
@@ -902,7 +828,13 @@ export default function PhotoboothApp() {
                     <p className="font-bold text-gray-800">4컷 (세로)</p>
                   </button>
                 </div>
-                <Button onClick={() => setStep("filter")} className="w-full py-6 text-lg bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white rounded-2xl shadow-lg">필터 선택하기<ArrowRight className="ml-2 w-5 h-5" /></Button>
+                <Button
+                  onClick={() => setStep("filter")}
+                  className="w-full py-5 text-base bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white rounded-2xl shadow-lg"
+                >
+                  필터 선택하기
+                  <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
               </div>
             </div>
           </div>
@@ -948,7 +880,10 @@ export default function PhotoboothApp() {
                     </button>
                   ))}
                 </div>
-                <Button onClick={() => setStep("capture")} className="w-full py-6 text-lg bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white rounded-2xl shadow-lg">
+                <Button
+                  onClick={() => setStep("capture")}
+                  className="w-full py-5 text-base bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white rounded-2xl shadow-lg"
+                >
                   촬영 시작하기
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
@@ -980,24 +915,24 @@ export default function PhotoboothApp() {
                   <Button
                     onClick={handleManualCapture}
                     disabled={isCapturing || !isStreamReady || photos.length >= maxPhotos || isAutoCapturing}
-                    className="py-6 text-lg bg-pink-500 hover:bg-pink-600 text-white rounded-2xl shadow-lg border-b-4 border-pink-700 active:translate-y-1 active:border-b-0 transition-all font-bold"
+                    className="py-5 text-base bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white rounded-2xl shadow-lg transition-all font-bold"
                   >
-                    <Camera className="w-6 h-6 mr-2" />
+                    <Camera className="w-5 h-5 mr-2" />
                     수동 촬영
                   </Button>
                   <Button
                     onClick={isAutoCapturing ? stopAutoCapture : handleAutoCapture}
                     disabled={(!isAutoCapturing && (isCapturing || photos.length >= maxPhotos)) || !isStreamReady}
                     className={cn(
-                      "py-6 text-lg rounded-2xl shadow-lg border-b-4 transition-all font-bold",
+                      "py-5 text-base rounded-2xl shadow-lg transition-all font-bold text-white",
                       isAutoCapturing
-                        ? "bg-red-500 hover:bg-red-600 text-white border-red-700"
-                        : "bg-purple-500 hover:bg-purple-600 text-white border-purple-700"
+                        ? "bg-red-500 hover:bg-red-600"
+                        : "bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600"
                     )}
                   >
                     {isAutoCapturing ? "중지" : (
                       <>
-                        <Play className="w-6 h-6 mr-2" />
+                        <Play className="w-5 h-5 mr-2" />
                         자동 촬영
                       </>
                     )}
@@ -1011,7 +946,15 @@ export default function PhotoboothApp() {
               <div className="bg-white rounded-3xl shadow-xl p-6">
                 <h3 className="font-bold mb-4">내 갤러리</h3>
                 <PhotoGrid showNumbers />
-                {photos.length === maxPhotos && <Button onClick={() => setStep("result")} className="w-full mt-4 py-5 bg-purple-500 text-white rounded-2xl">완료하기</Button>}
+                {photos.length === maxPhotos && (
+                  <Button
+                    onClick={() => setStep("result")}
+                    className="w-full mt-4 py-5 text-base bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white rounded-2xl shadow-lg"
+                  >
+                    완료하기
+                    <ArrowRight className="ml-2 w-5 h-5" />
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -1054,8 +997,22 @@ export default function PhotoboothApp() {
               <div className="grid grid-cols-6 gap-2">
                 {FRAME_THEMES.map(t => <button key={t.id} onClick={() => setFrameTheme(t.id)} className={cn("w-10 h-10 rounded-lg flex items-center justify-center", frameTheme === t.id ? "ring-2 ring-purple-500" : "")} style={{ background: t.gradient }}>{t.icon}</button>)}
               </div>
-              <Button onClick={handleDownloadWithAd} className="w-full py-5 bg-pink-500 text-white rounded-2xl">다운로드</Button>
-              <Button onClick={() => { resetPhotos(); setStep("landing"); }} variant="outline" className="w-full py-5 text-gray-500 rounded-2xl">다시 찍기</Button>
+              <Button
+                onClick={handleDownloadWithAd}
+                className="w-full py-5 text-base bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white rounded-2xl shadow-lg"
+              >
+                <Download className="w-5 h-5 mr-2" />
+                다운로드
+                <Sparkles className="ml-2 w-5 h-5" />
+              </Button>
+              <Button
+                onClick={() => { resetPhotos(); setStep("landing"); }}
+                variant="outline"
+                className="w-full py-5 text-base text-gray-500 rounded-2xl border-gray-200 hover:bg-gray-50"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                다시 찍기
+              </Button>
             </div>
           </div>
         </div>
@@ -1065,18 +1022,10 @@ export default function PhotoboothApp() {
     return null;
   };
 
+
   return (
     <>
-      {showDebug && <DebugOverlay logs={logs} onClose={() => setShowDebug(false)} />}
       {renderContent()}
-      <div className="fixed bottom-4 right-4 z-50">
-        <button
-          onClick={() => setShowDebug(true)}
-          className="w-10 h-10 bg-black/20 hover:bg-black/40 text-white rounded-full flex items-center justify-center backdrop-blur-sm transition-colors text-[10px]"
-        >
-          LOG
-        </button>
-      </div>
       <ConfirmDialog
         isOpen={isConfirmOpen}
         title={"광고 시청 후 다운로드"}

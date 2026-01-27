@@ -2,7 +2,7 @@ import { useCallback, useRef, useState, useEffect } from "react";
 import { GoogleAdMob } from "@apps-in-toss/web-framework";
 
 
-const TEST_AD_GROUP_ID = "ait-ad-test-rewarded-id";
+const TEST_AD_GROUP_ID = "ait.v2.live.b03c486e67824a95";
 
 interface RewardedAdCallbacks {
     onRewarded?: () => void;
@@ -22,7 +22,6 @@ export function useRewardedAd() {
             GoogleAdMob.loadAppsInTossAdMob.isSupported?.() === false;
 
         if (isAdUnsupported) {
-            console.warn("광고가 준비되지 않았거나, 지원되지 않아요.");
             return;
         }
 
@@ -39,7 +38,6 @@ export function useRewardedAd() {
                 }
             },
             onError: (error) => {
-                console.error("광고 로드 실패", error);
             },
         });
 
@@ -58,7 +56,6 @@ export function useRewardedAd() {
             GoogleAdMob.showAppsInTossAdMob.isSupported?.() === false;
 
         if (loading || isAdUnsupported) {
-            console.warn("광고가 준비되지 않았거나, 지원되지 않아요.");
             // 광고가 안될 경우 바로 보상을 주거나 에러 처리를 해야 할 수도 있지만, 
             // 요구사항에 맞춰 시도합니다.
             return;
@@ -97,7 +94,6 @@ export function useRewardedAd() {
                 }
             },
             onError: (error) => {
-                console.error("광고 보여주기 실패", error);
             },
         });
     };
