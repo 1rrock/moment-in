@@ -1,5 +1,7 @@
-import PhotoboothApp from "@/components/photobooth/photobooth-app";
+"use client";
+
+import { LandingStep } from "@/components/photobooth/steps/Landing";
 
 export default function Page() {
-  return <PhotoboothApp />;
+  return <LandingStep />;
 }
