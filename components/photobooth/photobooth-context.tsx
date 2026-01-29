@@ -6,7 +6,7 @@ import { useRouter, usePathname } from "next/navigation";
 
 export type LayoutType = "4cut" | "4cut-vertical" | "6cut";
 export type FilterType = "none" | "vintage" | "bw" | "warm" | "cool" | "soft";
-export type FrameTheme = "coral" | "peach" | "sunset" | "cream" | "mint" | "sage" | "rose" | "lavender" | "sky" | "ocean" | "mono" | "dark";
+export type FrameTheme = "coral" | "peach" | "sunset" | "cream" | "mint" | "sage" | "rose" | "lavender" | "sky" | "ocean" | "mono" | "dark" | "blush" | "honey" | "aqua" | "violet";
 export type Step = "landing" | "camera" | "layout" | "filter" | "capture" | "result";
 
 export const FILTERS: { id: FilterType; name: string; icon: string; style: string }[] = [
@@ -19,13 +19,22 @@ export const FILTERS: { id: FilterType; name: string; icon: string; style: strin
 ];
 
 export const FRAME_THEMES: { id: FrameTheme; name: string; icon: string; gradient: string; textColor: string }[] = [
-    { id: "mono", name: "화이트", icon: "⬜", gradient: "#ffffff", textColor: "#000000" },
+    { id: "mono", name: "모노", icon: "⬜", gradient: "#ffffff", textColor: "#000000" },
     { id: "dark", name: "다크", icon: "⬛", gradient: "#000000", textColor: "#ffffff" },
     { id: "peach", name: "피치", icon: "🍑", gradient: "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)", textColor: "#e85d04" },
-    { id: "coral", name: "코랄", icon: "🪸", gradient: "linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)", textColor: "#d63384" },
+    { id: "coral", name: "코랄", icon: "🌺", gradient: "linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)", textColor: "#d63384" },
+    { id: "sunset", name: "선셋", icon: "🌇", gradient: "linear-gradient(135deg, #f6d365 0%, #fda085 100%)", textColor: "#d35400" },
+    { id: "cream", name: "크림", icon: "🍦", gradient: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)", textColor: "#5d6d7e" },
     { id: "mint", name: "민트", icon: "🌱", gradient: "linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%)", textColor: "#2d6a4f" },
-    { id: "sky", name: "스카이", icon: "☁️", gradient: "linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)", textColor: "#0077b6" },
+    { id: "sage", name: "세이지", icon: "🌿", gradient: "linear-gradient(135deg, #96fbc4 0%, #f9f586 100%)", textColor: "#1b4332" },
+    { id: "rose", name: "로즈", icon: "🌹", gradient: "linear-gradient(135deg, #fff1eb 0%, #ace0f9 100%)", textColor: "#c0392b" },
     { id: "lavender", name: "라벤더", icon: "💜", gradient: "linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)", textColor: "#7209b7" },
+    { id: "sky", name: "스카이", icon: "☁️", gradient: "linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)", textColor: "#0077b6" },
+    { id: "ocean", name: "오션", icon: "🌊", gradient: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)", textColor: "#003049" },
+    { id: "blush", name: "블러쉬", icon: "🌸", gradient: "linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%)", textColor: "#a0522d" },
+    { id: "honey", name: "허니", icon: "🍯", gradient: "linear-gradient(135deg, #f6d365 0%, #fda085 100%)", textColor: "#b7950b" },
+    { id: "aqua", name: "아쿠아", icon: "💧", gradient: "linear-gradient(135deg, #13547a 0%, #80d0c7 100%)", textColor: "#ffffff" },
+    { id: "violet", name: "바이올렛", icon: "🍆", gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", textColor: "#ffffff" },
 ];
 
 export const STEPS = [
@@ -59,6 +68,7 @@ interface PhotoboothContextType {
     maxPhotos: number;
     isConfirmOpen: boolean;
     setIsConfirmOpen: (b: boolean) => void;
+    hasDownloaded: boolean;
 
     // Refs
     videoRef: React.RefObject<HTMLVideoElement | null>;
@@ -94,6 +104,7 @@ export const PhotoboothProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
     const [shouldDownload, setShouldDownload] = useState(false);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [hasDownloaded, setHasDownloaded] = useState(false);
 
     const router = useRouter();
     const pathname = usePathname();
@@ -338,6 +349,7 @@ export const PhotoboothProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     const resetPhotos = useCallback(() => {
         setPhotos([]);
+        setHasDownloaded(false);
         stopAutoCapture();
     }, [stopAutoCapture]);
 
@@ -357,29 +369,41 @@ export const PhotoboothProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
 
-        const padding = 30;
-        const photoWidth = 280;
-        const photoHeight = 360;
-        const gap = 12;
-        const topPadding = 60;
-        const bottomPadding = 50;
-
-        if (layout === "4cut") {
-            canvas.width = photoWidth * 2 + gap + padding * 2;
-            canvas.height = photoHeight * 2 + gap + padding * 2 + topPadding + bottomPadding;
+        const isVertical = layout === "4cut-vertical";
+        if (isVertical) {
+            canvas.width = 1375;
+            canvas.height = 4096;
         } else {
-            canvas.width = photoWidth * 2 + gap + padding * 2;
-            canvas.height = photoHeight * 3 + gap * 2 + padding * 2 + topPadding + bottomPadding;
+            canvas.width = 1500;
+            canvas.height = 2250;
         }
+
+        const photoWidth = isVertical ? 1244 : 673;
+        const photoHeight = isVertical ? 904 : 926;
+        const gap = 23;
+        
+        const horizontalPadding = (canvas.width - (isVertical ? photoWidth : (photoWidth * 2 + gap))) / 2;
+        
+        const totalPhotosHeight = isVertical 
+            ? (photoHeight * 4) + (gap * 3) 
+            : (photoHeight * 2) + gap;
+        
+        const verticalSpace = canvas.height - totalPhotosHeight;
+        const topAreaHeight = verticalSpace * 0.65;
+        const bottomAreaHeight = verticalSpace * 0.35;
+        const startY = topAreaHeight;
 
         const theme = FRAME_THEMES.find((t) => t.id === frameTheme);
         if (theme?.gradient.startsWith('linear-gradient')) {
-            const g = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-            if (frameTheme === "peach") { g.addColorStop(0, "#ffecd2"); g.addColorStop(1, "#fcb69f"); }
-            else if (frameTheme === "coral") { g.addColorStop(0, "#ff9a9e"); g.addColorStop(1, "#fecfef"); }
-            else if (frameTheme === "mint") { g.addColorStop(0, "#d4fc79"); g.addColorStop(1, "#96e6a1"); }
-            else if (frameTheme === "lavender") { g.addColorStop(0, "#e0c3fc"); g.addColorStop(1, "#8ec5fc"); }
-            else if (frameTheme === "sky") { g.addColorStop(0, "#a1c4fd"); g.addColorStop(1, "#c2e9fb"); }
+            const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            const colors = theme.gradient.match(/#[a-fA-F0-9]{6}/g);
+            if (colors && colors.length >= 2) {
+                g.addColorStop(0, colors[0]);
+                g.addColorStop(1, colors[1]);
+            } else {
+                g.addColorStop(0, "#ffffff");
+                g.addColorStop(1, "#f0f0f0");
+            }
             ctx.fillStyle = g;
         } else {
             ctx.fillStyle = theme?.gradient || "#ffffff";
@@ -392,20 +416,37 @@ export const PhotoboothProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 const img = new window.Image();
                 img.crossOrigin = "anonymous";
                 img.onload = () => {
-                    const col = index % 2;
-                    const row = Math.floor(index / 2);
-                    const x = padding + col * (photoWidth + gap);
-                    const y = padding + topPadding + row * (photoHeight + gap);
+                    let col, row;
+                    if (isVertical) {
+                        col = 0;
+                        row = index;
+                    } else {
+                        col = index % 2;
+                        row = Math.floor(index / 2);
+                    }
+                    
+                    const x = horizontalPadding + col * (photoWidth + gap);
+                    const y = startY + row * (photoHeight + gap);
+                    
                     ctx.save();
                     ctx.beginPath();
-                    ctx.roundRect(x, y, photoWidth, photoHeight, 6);
+                    ctx.rect(x, y, photoWidth, photoHeight);
                     ctx.clip();
+                    
                     if (filterStyle) ctx.filter = filterStyle;
+                    
                     const imgRatio = img.width / img.height;
                     const targetRatio = photoWidth / photoHeight;
                     let sx = 0, sy = 0, sWidth = img.width, sHeight = img.height;
-                    if (imgRatio > targetRatio) { sWidth = img.height * targetRatio; sx = (img.width - sWidth) / 2; }
-                    else { sHeight = img.width / targetRatio; sy = (img.height - sHeight) / 2; }
+                    
+                    if (imgRatio > targetRatio) {
+                        sWidth = img.height * targetRatio;
+                        sx = (img.width - sWidth) / 2;
+                    } else {
+                        sHeight = img.width / targetRatio;
+                        sy = (img.height - sHeight) / 2;
+                    }
+                    
                     ctx.drawImage(img, sx, sy, sWidth, sHeight, x, y, photoWidth, photoHeight);
                     ctx.restore();
                     resolve();
@@ -416,17 +457,20 @@ export const PhotoboothProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
         try {
             await Promise.all(loadPromises);
-            ctx.fillStyle = theme?.textColor || "#e85d04";
+            
+            ctx.fillStyle = theme?.textColor || "#000000";
             ctx.textAlign = "center";
-            ctx.font = "bold 28px 'Geist', sans-serif";
-            ctx.fillText("moment in 📸", canvas.width / 2, padding + 35);
+            ctx.textBaseline = "middle";
+            ctx.font = "500 66px 'Pretendard Variable', 'Pretendard', sans-serif";
+            ctx.fillText("moment in 📸", canvas.width / 2, topAreaHeight / 2);
 
             const now = new Date();
-            const dateStr = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}`;
-            ctx.font = "500 16px 'Geist', sans-serif";
-            ctx.fillText(dateStr, canvas.width / 2, canvas.height - 20);
+            const dateStr = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}, ${String(now.getHours() % 12 || 12).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} ${now.getHours() >= 12 ? "PM" : "AM"}`;
+            ctx.font = "500 33px 'Pretendard Variable', 'Pretendard', sans-serif";
+            const dateY = startY + totalPhotosHeight + (bottomAreaHeight / 2);
+            ctx.fillText(dateStr, canvas.width / 2, dateY);
 
-            const dataUrl = canvas.toDataURL("image/png");
+            const dataUrl = canvas.toDataURL("image/png", 1.0);
             const base64Data = dataUrl.split(",")[1];
 
             try {
@@ -438,6 +482,7 @@ export const PhotoboothProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 link.href = dataUrl;
                 link.click();
             }
+            setHasDownloaded(true);
         } catch { }
     }, [photos, layout, filter, frameTheme]);
 
@@ -448,7 +493,14 @@ export const PhotoboothProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         }
     }, [shouldDownload, downloadResult]);
 
-    const handleDownloadWithAd = useCallback(() => setIsConfirmOpen(true), []);
+    const handleDownloadWithAd = useCallback(() => {
+        if (hasDownloaded) {
+            downloadResult();
+            return;
+        }
+        setIsConfirmOpen(true);
+    }, [hasDownloaded, downloadResult]);
+
     const handleConfirmDownload = useCallback(() => {
         setIsConfirmOpen(false);
         showRewardAd({
@@ -462,7 +514,7 @@ export const PhotoboothProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             step, setStep: setStepWithNavigation, layout, setLayout, filter, setFilter, frameTheme, setFrameTheme,
             photos, setPhotos, isCapturing, countdown, cameraError, isStreamReady,
             delayTime, setDelayTime, isAutoCapturing, showFlash, maxPhotos,
-            isConfirmOpen, setIsConfirmOpen, videoRef, canvasRef,
+            isConfirmOpen, setIsConfirmOpen, hasDownloaded, videoRef, canvasRef,
             toggleCamera, resetPhotos, handleManualCapture, handleAutoCapture,
             stopAutoCapture, handleDownloadWithAd, handleConfirmDownload, downloadResult
         }}>
